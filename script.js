@@ -1,19 +1,14 @@
 const video = document.getElementById("video");
-let predictedAges = [];
 
 const startVideo = () => {
-  navigator.getUserMedia(
-    { video: {} },
-    (stream) => (video.srcObject = stream),
-    (err) => console.error(err)
-  );
-};
-
-const interpolateAgePredictions = (age) => {
-  predictedAges = [age].concat(predictedAges).slice(0, 30);
-  const avgPredictedAge =
-    predictedAges.reduce((total, a) => total + a) / predictedAges.length;
-  return avgPredictedAge;
+  navigator.mediaDevices
+    .getUserMedia({
+      video: true,
+      audio: false,
+    })
+    .then((cameraStream) => {
+      video.srcObject = cameraStream;
+    });
 };
 
 Promise.all([
@@ -46,16 +41,12 @@ video.addEventListener("playing", () => {
     faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
     faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
 
-    const age = resizedDetections[0].age;
-    const interpolatedAge = interpolateAgePredictions(age);
-    const bottomRight = {
-      x: resizedDetections[0].detection.box.bottomRight.x - 60,
-      y: resizedDetections[0].detection.box.bottomRight.y,
-    };
-
-    new faceapi.draw.DrawTextField(
-      [`${faceapi.utils.round(interpolatedAge, 0)} years`],
-      bottomRight
-    ).draw(canvas);
+    resizedDetections.forEach((detection) => {
+      const box = detection.detection.box;
+      const drawBox = new faceapi.draw.DrawBox(box, {
+        label: Math.round(detection.age) + " year old " + detection.gender,
+      });
+      drawBox.draw(canvas);
+    });
   }, 100);
 });
