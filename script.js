@@ -1,14 +1,21 @@
 const video = document.getElementById("video");
-
-const startVideo = () => {
-  navigator.mediaDevices
-    .getUserMedia({
-      video: true,
-      audio: false,
-    })
-    .then((cameraStream) => {
-      video.srcObject = cameraStream;
-    });
+const startVideo = async () => {
+  const constraints = {
+    audio: false,
+    video: { width: video.width, height: video.height, facingMode: "user" },
+  };
+  try {
+    navigator.mediaDevices
+      .getUserMedia(constraints)
+      .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+        console.log("facial rec video is playing");
+      })
+      .catch((err) => console.error(err));
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 Promise.all([
@@ -17,7 +24,7 @@ Promise.all([
   faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
   faceapi.nets.faceExpressionNet.loadFromUri("/models"),
   faceapi.nets.ageGenderNet.loadFromUri("/models"),
-]).then(startVideo);
+]).then(() => startVideo());
 
 video.addEventListener("playing", () => {
   const canvas = faceapi.createCanvasFromMedia(video);
@@ -27,11 +34,7 @@ video.addEventListener("playing", () => {
   faceapi.matchDimensions(canvas, displaySize);
 
   setInterval(async () => {
-    const detections = await faceapi
-      .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks()
-      .withFaceExpressions()
-      .withAgeAndGender();
+    const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
 
     const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
